@@ -1,0 +1,7 @@
+###Variable declared here
+@QtechOJT_Net9_HostAddress = http://localhost:5261
+
+GET {{QtechOJT_Net9_HostAddress}}/weatherforecast/
+Accept: application/json
+
+###
