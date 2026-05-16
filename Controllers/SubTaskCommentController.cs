@@ -146,7 +146,33 @@ namespace QtechOJT_Net9.Controllers
             return StatusCode(201, created);
         }
 
+        [HttpPatch("{commentId:int}")]
+        // -- PATCH /api/subtask-comments/:commentId --------------------
+        public async Task<IActionResult> EditComment(int commentId, [FromBody] EditCommentDto dto)
+        {
+            if (string.IsNullOrWhiteSpace(dto.Comment))
+                return BadRequest(new { message = "Comment text is required" });
 
+            int? userId = null; // get the current user ID from the request header, same as the add comment method
+            if (Request.Headers.TryGetValue("x-user-id", out var userIdHeader)
+                && int.TryParse(userIdHeader, out var parsedId))
+                userId = parsedId;
+
+            if (userId is null)
+                return BadRequest(new { message = "User not identified — x-user-id header missing" });
+
+            var comment = await _context.Sub_Task_Comments.FindAsync(commentId);
+            if (comment is null)
+                return NotFound(new { message = "Comment not found" });
+
+            // Simple check to see if the current userId from the request header is the same as the comment ID
+            if (comment.UserId != userId)
+                return StatusCode(403, new { message = "You can only edit your own comments" });
+
+            comment.Comment = dto.Comment.Trim();
+            await _context.SaveChangesAsync();
+            return Ok(new { comment = comment.Comment });
+        }
 
 
         // -- DELETE /api/subtask-comments/:commentId --------------------
