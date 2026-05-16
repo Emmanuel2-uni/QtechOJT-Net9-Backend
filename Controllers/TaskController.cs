@@ -148,6 +148,7 @@ namespace QtechOJT_Net9.Controllers
                         m.Mandays,
                         m.Subtasks.Select(s => new GetSubTaskDto(
                                 s.Id,
+                                s.CreatorId,
                                 s.Title,
                                 s.IsDone,
                                 s.Main_TaskId
@@ -196,6 +197,7 @@ namespace QtechOJT_Net9.Controllers
                         m.Mandays,
                         m.Subtasks.Select(s => new GetSubTaskDto(
                                 s.Id,
+                                s.CreatorId,
                                 s.Title,
                                 s.IsDone,
                                 s.Main_TaskId
@@ -504,7 +506,8 @@ namespace QtechOJT_Net9.Controllers
                     m.Variance,
                     m.Mandays,
                     m.Subtasks.Select(s => new GetSubTaskDto(
-                            s.Id, 
+                            s.Id,
+                            s.CreatorId,
                             s.Title, 
                             s.IsDone, 
                             s.Main_TaskId)
@@ -672,6 +675,7 @@ namespace QtechOJT_Net9.Controllers
                    m.Mandays,
                    m.Subtasks.Select(s => new GetSubTaskDto(
                                s.Id,
+                               s.CreatorId,
                                s.Title,
                                s.IsDone,
                                s.Main_TaskId
