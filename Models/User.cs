@@ -20,6 +20,8 @@ namespace QtechOJT_Net9.Models
 
         public ICollection<Main_Task>? DevTasks { get; set; } = [];
         public ICollection<Main_Task>? QATasks { get; set; } = [];
+        public ICollection<Main_Task>? CreatorTasks { get; set; } = []; 
+
         public ICollection<Project> Project { get; set; } = []; // FK from Project
         public ICollection<Activity> Activity { get; set; } = []; // FK from Activity Log
 

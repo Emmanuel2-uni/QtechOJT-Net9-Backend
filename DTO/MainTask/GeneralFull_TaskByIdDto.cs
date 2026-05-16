@@ -22,6 +22,9 @@ namespace QtechOJT_Net9.DTO.MainTask
         int? QaAssigneeId,
         string? QaAssigneeName,
 
+        int? CreatorId,
+        string? CreatorName,
+
         int StatusId,
         string StatusLabel,
         string StatusColor,

@@ -22,6 +22,8 @@ namespace QtechOJT_Net9.DTO.MainTask
 
         public int? AssigneeId { get; set; }
         public int? QaAssigneeId { get; set; }
+        public int? CreatorId { get; set; }
+
 
         public DateTime? StartDate { get; set; } = DateTime.Now;
         public DateTime? TargetDate { get; set; } = DateTime.Now;

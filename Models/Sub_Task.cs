@@ -12,8 +12,8 @@
         public Main_Task Main_Task { get; set; } = null!;
 
         // FK to Creator
-        //public int? CreatorId { get; set; }
-        //public User Creator { get; set; }
+        public int? CreatorId { get; set; } // Again, nullable so that database doesn't explode due to existing entries without CreatorId
+        public User? Creator { get; set; }
 
         public ICollection<Sub_Task_Comment> Sub_Task_Comments { get; set; } // change this variable name when needed, if FE fetching is problematic
 

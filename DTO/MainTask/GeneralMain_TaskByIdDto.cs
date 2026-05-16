@@ -19,6 +19,9 @@
             int? QaAssigneeId,
             string? QaAssigneeName,
 
+            int? CreatorId,
+            string? CreatorName,
+
             int StatusId,
             string StatusLabel,
 

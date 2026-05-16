@@ -2,6 +2,7 @@
 {
     public record SubTaskItemDto(
         int Id, 
+        int CreatorId,
         string Title, 
         bool IsDone   );
 }

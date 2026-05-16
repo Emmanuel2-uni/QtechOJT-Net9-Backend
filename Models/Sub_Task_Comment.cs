@@ -9,9 +9,8 @@
         public Sub_Task Sub_Task { get; set; } = null!;
 
         // User/Commenter FK — nullable
-        public int? UserId { get; set; }
+        public int? UserId { get; set; } // This is already the Creator, we don't need to add a CreatorId
         public User? User { get; set; }
-
 
         public string? Comment { get; set; }
         public required DateTime CommentDate { get; set; } = DateTime.UtcNow;

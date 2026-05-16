@@ -136,6 +136,7 @@ namespace QtechOJT_Net9.Controllers
                         // User info
                         m.Assignee.Id, m.Assignee.Name,
                         m.QaAssignee.Id, m.QaAssignee.Name,
+                        m.Creator.Id, m.Creator.Name,
 
                         // Status info
                         m.Status.Id, m.Status.Label, m.Status.Color,
@@ -180,6 +181,7 @@ namespace QtechOJT_Net9.Controllers
                         // User info
                         m.Assignee.Id, m.Assignee.Name, 
                         m.QaAssignee.Id, m.QaAssignee.Name,
+                        m.Creator.Id, m.Creator.Name,
 
                         // Status info
                         m.Status.Id, m.Status.Label, m.Status.Color,
@@ -209,15 +211,16 @@ namespace QtechOJT_Net9.Controllers
         }
 
 
+        // -- POST NEW MAIN TASK --------------------------------
         [HttpPost]
         public async Task<ActionResult<PostMain_TaskDto>> AddMain_Task(PostMain_TaskDto req)
         {
             // We will attempt to read from the Header; Frontend should have a login flow setup so that whoever sends the header, has a userId (from PM/Admin)
             // This is for logging later
-            int? AssigneeId = null;
+            int? CreatorId = null;
             if (Request.Headers.TryGetValue("x-user-id", out var AssigneeIdHeader))
                 if (int.TryParse(AssigneeIdHeader, out var parsedId))
-                    AssigneeId = parsedId;
+                    CreatorId = parsedId;
 
             if (req is null)
                 return BadRequest("Body is null");
@@ -289,6 +292,7 @@ namespace QtechOJT_Net9.Controllers
                 StatusId = req.StatusId,
                 AssigneeId = req.AssigneeId,
                 QaAssigneeId = req.QaAssigneeId,
+                CreatorId = CreatorId,
                 Variance = null,
                 Mandays = CountMandays((DateTime)req.StartDate, (DateTime)req.TargetDate)
 
@@ -302,7 +306,7 @@ namespace QtechOJT_Net9.Controllers
             var activity = new Activity
             {
                 Main_TaskId = task.Id,
-                UserId = AssigneeId,
+                UserId = CreatorId,
                 ActionDone = "Task created",
                 CreatedAt = DateTime.Now
             };
@@ -320,6 +324,7 @@ namespace QtechOJT_Net9.Controllers
                     m.UpdatedAt, m.CreatedAt, m.ActualEndDate, m.StartDate, m.TargetDate,
                     m.Assignee.Id, m.Assignee.Name,
                     m.QaAssignee.Id, m.QaAssignee.Name,
+                    m.Creator.Id, m.Creator.Name,
                     m.Status.Id, m.Status.Label,
                     m.Severity.Id, m.Severity.Label, m.Severity.Color, m.Severity.SortOrder,
                     m.Phase.Id, m.Phase.Label, m.Phase.Grouping,
@@ -332,7 +337,7 @@ namespace QtechOJT_Net9.Controllers
         }
 
 
-
+        // -- PATCH TASK to NEW PHASE/COLUMN --------------------------------
         [HttpPatch("{getId}/phase")]
         public async Task<IActionResult> ChangePhase(int getId, ChangePhaseMain_TaskDto req)
         {
@@ -340,10 +345,10 @@ namespace QtechOJT_Net9.Controllers
             //const { phaseId, actualEndDate } = req.body;
             //const userId = req.headers["x-user-id"] ? Number(req.headers["x-user-id"]) : null;
 
-            int? AssigneeId = null;
-            if (Request.Headers.TryGetValue("x-user-id", out var AssigneeIdHeader))
-                if (int.TryParse(AssigneeIdHeader, out var parsedId))
-                    AssigneeId = parsedId;
+            int? CreatorId = null;
+            if (Request.Headers.TryGetValue("x-user-id", out var CreatorIdHeader))
+                if (int.TryParse(CreatorIdHeader, out var parsedId))
+                    CreatorId = parsedId;
 
             if (req.PhaseId is 0)
                 return BadRequest("PhaseId is required.");
@@ -390,7 +395,7 @@ namespace QtechOJT_Net9.Controllers
             _context.Activity_Log.Add(new Activity
             {
                 Main_TaskId = getId,
-                UserId = AssigneeId ?? 0,
+                UserId = CreatorId ?? 0,
                 ActionDone = logAction,
                 CreatedAt = DateTime.Now
             });
@@ -405,6 +410,7 @@ namespace QtechOJT_Net9.Controllers
                     m.UpdatedAt, m.CreatedAt, m.ActualEndDate, m.StartDate, m.TargetDate,
                     m.Assignee.Id, m.Assignee.Name,
                     m.QaAssignee.Id, m.QaAssignee.Name,
+                    m.Creator.Id, m.Creator.Name,
                     m.Status.Id, m.Status.Label,
                     m.Severity.Id, m.Severity.Label, m.Severity.Color, m.Severity.SortOrder,
                     m.Phase.Id, m.Phase.Label, m.Phase.Grouping,
@@ -418,10 +424,15 @@ namespace QtechOJT_Net9.Controllers
         }
 
 
-
+        // -- PATCH SUBTASKS --------------------------------
         [HttpPatch("{getId}/subtasks")]
         public async Task<IActionResult> UpdateSubtasks(int getId, [FromBody] UpdateSubtasksDto dto)
         {
+            int? CreatorId = null;
+            if (Request.Headers.TryGetValue("x-user-id", out var CreatorIdHeader))
+                if (int.TryParse(CreatorIdHeader, out var parsedId))
+                    CreatorId = parsedId;
+
             var task = await _context.Main_Tasks
                 .Include(t => t.Subtasks)
                 .FirstOrDefaultAsync(t => t.Id == getId);
@@ -459,7 +470,8 @@ namespace QtechOJT_Net9.Controllers
                 {
                     Title = s.Title,
                     IsDone = s.IsDone ? 1 : 0,
-                    Main_TaskId = getId
+                    Main_TaskId = getId,
+                    CreatorId = CreatorId
                 }).ToList();
 
             _context.Sub_Tasks.AddRange(newSubtasks);
@@ -485,6 +497,7 @@ namespace QtechOJT_Net9.Controllers
                     m.UpdatedAt, m.CreatedAt, m.ActualEndDate, m.StartDate, m.TargetDate,
                     m.Assignee.Id, m.Assignee.Name,
                     m.QaAssignee.Id, m.QaAssignee.Name,
+                    m.Creator.Id, m.Creator.Name,
                     m.Status.Id, m.Status.Label, m.Status.Color,
                     m.Severity.Id, m.Severity.Label, m.Severity.Color, m.Severity.SortOrder,
                     m.Phase.Id, m.Phase.Label, m.Phase.Grouping,
@@ -501,14 +514,16 @@ namespace QtechOJT_Net9.Controllers
             return Ok(updated);
         }
 
-        // Update the entire task
+
+
+        // -- UPDATE ENTIRE TASK --------------------------------
         [HttpPut("{getId}")]
         public async Task<IActionResult> UpdateMain_Task(int getId, [FromBody] UpdateMain_TaskDto req)
         {
-            int? AssigneeId = null;
-            if (Request.Headers.TryGetValue("x-user-id", out var AssigneeIdHeader))
-                if (int.TryParse(AssigneeIdHeader, out var parsedId))
-                    AssigneeId = parsedId;
+            int? CreatorId = null;
+            if (Request.Headers.TryGetValue("x-user-id", out var CreatorIdHeader))
+                if (int.TryParse(CreatorIdHeader, out var parsedId))
+                    CreatorId = parsedId;
 
             var task = await _context.Main_Tasks
                .Include(t => t.Assignee)
@@ -521,7 +536,7 @@ namespace QtechOJT_Net9.Controllers
                 return NotFound(new { message = "Task not found" });
 
             // Guards for TargetDate, StartDate
-            if (req.TargetDate < DateTime.Now || req.TargetDate < req.StartDate)
+            if (req.TargetDate < DateTime.Now.Date || req.TargetDate < req.StartDate)
                 return BadRequest("Target Date must be a valid future date and cannot be before the Start Date.");
 
             if (req.TargetDate is null)
@@ -629,12 +644,12 @@ namespace QtechOJT_Net9.Controllers
                 logs.Add($"Severity changed from \"{prev.SeverityLabel}\" to \"{newLabel}\"");
             }
 
-            if (logs.Count > 0 && AssigneeId.HasValue)
+            if (logs.Count > 0 && CreatorId.HasValue)
             {
                 _context.Activity_Log.AddRange(logs.Select(log => new Activity
                 {
                     Main_TaskId = getId,
-                    UserId = AssigneeId.Value,
+                    UserId = CreatorId.Value,
                     ActionDone = log,
                     CreatedAt = DateTime.Now
                 }));
@@ -649,6 +664,7 @@ namespace QtechOJT_Net9.Controllers
                    m.UpdatedAt, m.CreatedAt, m.ActualEndDate, m.StartDate, m.TargetDate,
                    m.Assignee.Id, m.Assignee.Name,
                    m.QaAssignee.Id, m.QaAssignee.Name,
+                   m.Creator.Id, m.Creator.Name,
                    m.Status.Id, m.Status.Label, m.Status.Color,
                    m.Severity.Id, m.Severity.Label, m.Severity.Color, m.Severity.SortOrder,
                    m.Phase.Id, m.Phase.Label, m.Phase.Grouping,
@@ -669,6 +685,7 @@ namespace QtechOJT_Net9.Controllers
         }
 
 
+
         // -- PATCH for progress 0 to 100 ------------------------------
         // Directly set progress (used when a task has no subtasks)
         [HttpPatch("{getId}/progress")]
@@ -687,7 +704,8 @@ namespace QtechOJT_Net9.Controllers
             return Ok(new { task.Id, task.Progress });
         }
 
-        // Delete
+
+        // -- DELETE TASK --------------------------------
         [HttpDelete("{id}")]
         public async Task<IActionResult> DeleteMainTask(int id)
         {

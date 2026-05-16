@@ -37,6 +37,7 @@ namespace QtechOJT_Net9.Models
         public int? Variance { get; set; } = null;
         public int? Mandays { get; set; } = null;
         public required DateTime UpdatedAt { get; set; } = DateTime.Now;
+        
 
 
         // Variables for determining which phase and project this task belongs to
@@ -58,8 +59,10 @@ namespace QtechOJT_Net9.Models
         public int? QaAssigneeId { get; set; }
         public User? QaAssignee { get; set; }
 
-        //public int? CreatorId { get; set; }
-        //public User? Creator {  get; set; }
+        public int? CreatorId { get; set; } // We set nullable so that migrations don't explode the database upon updating,
+                                            // since we are adding this to an already existing table with existing entries,
+                                            // and so the existing entries will have null for CreatorId
+        public User? Creator { get; set; }
 
 
         // FK to Phase

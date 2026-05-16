@@ -125,6 +125,13 @@ namespace QtechOJT_Net9.Database
                       .IsRequired(false)
                       .OnDelete(DeleteBehavior.Restrict); // If I delete a task, it should not delete the QA
 
+                // Creator FK
+                entity.HasOne(t => t.Creator)
+                      .WithMany(u => u.CreatorTasks)
+                      .HasForeignKey(t => t.CreatorId)
+                      .IsRequired(false)
+                      .OnDelete(DeleteBehavior.Restrict); // If I delete a task, it should not delete the Creator
+
                 entity.HasOne(t => t.Severity)
                       .WithMany(s => s.Main_Tasks)
                       .HasForeignKey(t => t.SeverityId)
