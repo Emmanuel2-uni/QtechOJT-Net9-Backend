@@ -239,17 +239,18 @@ namespace QtechOJT_Net9.Controllers
                     .MaxAsync(s => s.SortOrder);
 
             // Guards for TargetDate, StartDate, ProjectId, and PhaseId
-            if (req.TargetDate < DateTime.Now)
+            if (req.TargetDate < DateTime.Now || req.TargetDate < req.StartDate)
                 return BadRequest("Target Date must be a valid future date.");
 
             if (req.TargetDate is null)
                 req.TargetDate = DateTime.Now;
 
-            if (req.StartDate < DateTime.Now)
-                return BadRequest("Target Date must be a valid future date.");
+            if (req.StartDate < DateTime.Now.Date || req.StartDate > req.TargetDate)
+                return BadRequest("Start Date must be a valid date.");
 
             if (req.StartDate is null)
                 req.StartDate = DateTime.Now;
+
 
             if (req.ProjectId == 0)
                 return BadRequest("No ID");
@@ -526,7 +527,8 @@ namespace QtechOJT_Net9.Controllers
             if (req.TargetDate is null)
                 req.TargetDate = DateTime.Now;
 
-            if (req.StartDate < DateTime.Now || req.StartDate > req.TargetDate)
+
+            if (req.StartDate < DateTime.Now.Date || req.StartDate > req.TargetDate)
                 return BadRequest("Start Date must be a valid past date and cannot be after the Target Date.");
 
             if (req.StartDate is null)
@@ -667,6 +669,23 @@ namespace QtechOJT_Net9.Controllers
         }
 
 
+        // -- PATCH for progress 0 to 100 ------------------------------
+        // Directly set progress (used when a task has no subtasks)
+        [HttpPatch("{getId}/progress")]
+        public async Task<IActionResult> UpdateProgress(int getId, [FromBody] UpdateProgressDto req)
+        {
+            if (req.Progress < 0 || req.Progress > 100)
+                return BadRequest(new { message = "Progress must be between 0 and 100." });
+
+            var task = await _context.Main_Tasks.FindAsync(getId);
+            if (task is null) return NotFound(new { message = "Task not found." });
+
+            task.Progress = req.Progress;
+            task.UpdatedAt = DateTime.Now;
+            await _context.SaveChangesAsync();
+
+            return Ok(new { task.Id, task.Progress });
+        }
 
         // Delete
         [HttpDelete("{id}")]
