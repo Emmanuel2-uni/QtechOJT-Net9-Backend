@@ -30,6 +30,8 @@ namespace QtechOJT_Net9.Models
 
         //Variables for determining the date AND the variance once finished
         public required DateTime CreatedAt { get; set; }
+
+        public DateTime? StartDate { get; set; }
         public required DateTime TargetDate { get; set; }
         public DateTime? ActualEndDate { get; set; }
         public int? Variance { get; set; } = null;

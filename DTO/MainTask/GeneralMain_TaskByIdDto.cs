@@ -10,6 +10,7 @@
             DateTime UpdatedAt,
             DateTime CreatedAt,
             DateTime? ActualEndDate,
+            DateTime? StartDate,
             DateTime TargetDate,
 
             int? AssigneeId,

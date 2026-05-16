@@ -13,6 +13,7 @@ namespace QtechOJT_Net9.DTO.MainTask
         DateTime UpdatedAt,
         DateTime CreatedAt,
         DateTime? ActualEndDate,
+        DateTime? StartDate,
         DateTime TargetDate,
 
         int? AssigneeId,

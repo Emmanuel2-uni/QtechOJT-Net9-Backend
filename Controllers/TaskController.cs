@@ -31,10 +31,10 @@ namespace QtechOJT_Net9.Controllers
 
 
         // Private foo for counting the Mandays excluding Sat and Sun
-        private static int CountMandays(DateTime CreatedAt, DateTime TargetDate)
+        private static int CountMandays(DateTime StartDate, DateTime TargetDate)
         {
             int count = 0;
-            for (var d = CreatedAt.Date.AddDays(1); d <= TargetDate.Date; d = d.AddDays(1) ) // AddDays(1) to the CreatedAt to accurately get the exact count
+            for (var d = StartDate.Date.AddDays(1); d <= TargetDate.Date; d = d.AddDays(1) ) // AddDays(1) to the CreatedAt to accurately get the exact count
             {
                 if (d.DayOfWeek != DayOfWeek.Saturday && d.DayOfWeek != DayOfWeek.Sunday) // LINQ methods calling DayOfWeek
                     count++;
@@ -132,7 +132,7 @@ namespace QtechOJT_Net9.Controllers
                         m.Id, m.ProjectId,
                         m.Title, m.Description, m.Progress,
                         // Date info
-                        m.UpdatedAt, m.CreatedAt, m.ActualEndDate, m.TargetDate,
+                        m.UpdatedAt, m.CreatedAt, m.ActualEndDate, m.StartDate, m.TargetDate,
                         // User info
                         m.Assignee.Id, m.Assignee.Name,
                         m.QaAssignee.Id, m.QaAssignee.Name,
@@ -175,7 +175,7 @@ namespace QtechOJT_Net9.Controllers
                         m.Title, m.Description, m.Progress,
 
                         // Date info
-                        m.UpdatedAt, m.CreatedAt, m.ActualEndDate, m.TargetDate,
+                        m.UpdatedAt, m.CreatedAt, m.ActualEndDate, m.StartDate, m.TargetDate,
 
                         // User info
                         m.Assignee.Id, m.Assignee.Name, 
@@ -238,15 +238,23 @@ namespace QtechOJT_Net9.Controllers
                 ResolvedSeverityId = await _context.Severities
                     .MaxAsync(s => s.SortOrder);
 
-            // Guards for TargetDate, ProjectId, and PhaseId
+            // Guards for TargetDate, StartDate, ProjectId, and PhaseId
             if (req.TargetDate < DateTime.Now)
                 return BadRequest("Target Date must be a valid future date.");
 
             if (req.TargetDate is null)
                 req.TargetDate = DateTime.Now;
 
+            if (req.StartDate < DateTime.Now)
+                return BadRequest("Target Date must be a valid future date.");
+
+            if (req.StartDate is null)
+                req.StartDate = DateTime.Now;
+
             if (req.ProjectId == 0)
                 return BadRequest("No ID");
+
+
 
             var ResolvedPhaseId = req.PhaseId;
             if (ResolvedPhaseId == 0)
@@ -272,6 +280,7 @@ namespace QtechOJT_Net9.Controllers
 
                 CreatedAt = DateTime.Now,
                 UpdatedAt = DateTime.Now,
+                StartDate = (DateTime)req.StartDate,
                 TargetDate = (DateTime)req.TargetDate, // casting to remove nullable ambiguity
 
                 SeverityId = ResolvedSeverityId,
@@ -280,7 +289,7 @@ namespace QtechOJT_Net9.Controllers
                 AssigneeId = req.AssigneeId,
                 QaAssigneeId = req.QaAssigneeId,
                 Variance = null,
-                Mandays = CountMandays(DateTime.Now, (DateTime)req.TargetDate)
+                Mandays = CountMandays((DateTime)req.StartDate, (DateTime)req.TargetDate)
 
             };
 
@@ -307,7 +316,7 @@ namespace QtechOJT_Net9.Controllers
                 .Select(m => new GeneralMain_TaskByIdDto(
                     m.Id, m.ProjectId,
                     m.Title, m.Description, m.Progress,
-                    m.UpdatedAt, m.CreatedAt, m.ActualEndDate, m.TargetDate,
+                    m.UpdatedAt, m.CreatedAt, m.ActualEndDate, m.StartDate, m.TargetDate,
                     m.Assignee.Id, m.Assignee.Name,
                     m.QaAssignee.Id, m.QaAssignee.Name,
                     m.Status.Id, m.Status.Label,
@@ -392,7 +401,7 @@ namespace QtechOJT_Net9.Controllers
                 .Select(m => new GeneralMain_TaskByIdDto(
                     m.Id, m.ProjectId,
                     m.Title, m.Description, m.Progress,
-                    m.UpdatedAt, m.CreatedAt, m.ActualEndDate, m.TargetDate,
+                    m.UpdatedAt, m.CreatedAt, m.ActualEndDate, m.StartDate, m.TargetDate,
                     m.Assignee.Id, m.Assignee.Name,
                     m.QaAssignee.Id, m.QaAssignee.Name,
                     m.Status.Id, m.Status.Label,
@@ -472,7 +481,7 @@ namespace QtechOJT_Net9.Controllers
                 .Select(m => new GeneralFull_TaskByIdDto(
                     m.Id, m.ProjectId,
                     m.Title, m.Description, m.Progress,
-                    m.UpdatedAt, m.CreatedAt, m.ActualEndDate, m.TargetDate,
+                    m.UpdatedAt, m.CreatedAt, m.ActualEndDate, m.StartDate, m.TargetDate,
                     m.Assignee.Id, m.Assignee.Name,
                     m.QaAssignee.Id, m.QaAssignee.Name,
                     m.Status.Id, m.Status.Label, m.Status.Color,
@@ -510,6 +519,19 @@ namespace QtechOJT_Net9.Controllers
             if (task == null)
                 return NotFound(new { message = "Task not found" });
 
+            // Guards for TargetDate, StartDate
+            if (req.TargetDate < DateTime.Now || req.TargetDate < req.StartDate)
+                return BadRequest("Target Date must be a valid future date and cannot be before the Start Date.");
+
+            if (req.TargetDate is null)
+                req.TargetDate = DateTime.Now;
+
+            if (req.StartDate < DateTime.Now || req.StartDate > req.TargetDate)
+                return BadRequest("Start Date must be a valid past date and cannot be after the Target Date.");
+
+            if (req.StartDate is null)
+                req.StartDate = DateTime.Now;
+
             // Snapshot prev values before overwriting (for activity log later)
             var prev = new
             {
@@ -533,7 +555,9 @@ namespace QtechOJT_Net9.Controllers
             task.SeverityId = req.SeverityId ?? task.SeverityId;
             task.AssigneeId = req.AssigneeId;
             task.QaAssigneeId = req.QaAssigneeId;
+            task.StartDate = req.StartDate ?? DateTime.Now; // if start date is null, set to now, otherwise, set to the requested start date
             task.TargetDate = req.TargetDate ?? task.TargetDate;
+            task.Mandays = CountMandays((DateTime)task.StartDate, (DateTime)task.TargetDate);
             task.UpdatedAt = DateTime.Now;
 
             // EFCore tracks all of the changes of a specific instantiated Model when we fetch something from the DBContext
@@ -555,6 +579,12 @@ namespace QtechOJT_Net9.Controllers
 
             if (req.TargetDate.HasValue && req.TargetDate.Value != prev.TargetDate)
                 logs.Add($"Target date changed from \"{prev.TargetDate:yyyy-MM-dd}\" to \"{req.TargetDate.Value:yyyy-MM-dd}\"");
+
+            if (req.StartDate != task.StartDate)
+                logs.Add(req.StartDate.HasValue
+                    ? $"Start date set to \"{req.StartDate.Value:yyyy-MM-dd}\""
+                    : "Start date cleared");
+
 
             if (req.AssigneeId != prev.AssigneeId)
             {
@@ -614,7 +644,7 @@ namespace QtechOJT_Net9.Controllers
                .Select(m => new GeneralFull_TaskByIdDto(
                    m.Id, m.ProjectId,
                    m.Title, m.Description, m.Progress,
-                   m.UpdatedAt, m.CreatedAt, m.ActualEndDate, m.TargetDate,
+                   m.UpdatedAt, m.CreatedAt, m.ActualEndDate, m.StartDate, m.TargetDate,
                    m.Assignee.Id, m.Assignee.Name,
                    m.QaAssignee.Id, m.QaAssignee.Name,
                    m.Status.Id, m.Status.Label, m.Status.Color,
@@ -637,7 +667,8 @@ namespace QtechOJT_Net9.Controllers
         }
 
 
-        // delete
+
+        // Delete
         [HttpDelete("{id}")]
         public async Task<IActionResult> DeleteMainTask(int id)
         {
