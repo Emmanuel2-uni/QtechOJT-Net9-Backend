@@ -224,6 +224,17 @@ namespace QtechOJT_Net9.Controllers
                 if (int.TryParse(AssigneeIdHeader, out var parsedId))
                     CreatorId = parsedId;
 
+
+            // GUARD for authorization: only the creator (PM) or Admin can create main tasks
+            var requestingUser = await _context.Users.FindAsync(CreatorId); // from [FromQuery] or body
+            if (requestingUser is null) return Unauthorized();
+
+            Console.WriteLine($"Requesting User Role: {requestingUser.Role}, User ID: {requestingUser.Id}"); // Debug log
+
+            if (requestingUser.Role != "ProjectManager" && requestingUser.Role != "Admin") // Check if the requesting user is a PM, Optionally, allow Admins to delete any task regardless of creator
+                return StatusCode(403, new { message = "Only the task creator or a PM can insert this task." });
+
+
             if (req is null)
                 return BadRequest("Body is null");
 
@@ -442,7 +453,7 @@ namespace QtechOJT_Net9.Controllers
             if (task == null)
                 return NotFound(new { message = "Task not found" });
 
-            // This is an OPTIMISTIC update
+            // This is an OPTIMISTIC update, sync diff approach
             var incomingIds = dto.Subtasks
                 .Where(s => s.Id != 0)
                 .Select(s => s.Id)
@@ -452,6 +463,20 @@ namespace QtechOJT_Net9.Controllers
             var toDelete = task.Subtasks
                 .Where(s => !incomingIds.Contains(s.Id))
                 .ToList();
+
+
+            // GUARD reject the whole sync if any subtask being removed wasn't created by this user
+            var forbidden = toDelete
+                .Where(s => s.CreatorId is not null && s.CreatorId != CreatorId)
+                .ToList();
+
+            if (forbidden.Count > 0)
+                return StatusCode(403, new
+                {
+                    message = "You can only delete subtasks you created",
+                    subtaskIds = forbidden.Select(s => s.Id)
+                });
+
 
             await _context.Sub_Tasks
                 .Where(s => toDelete.Select(d => d.Id).Contains(s.Id))
@@ -537,6 +562,20 @@ namespace QtechOJT_Net9.Controllers
 
             if (task == null)
                 return NotFound(new { message = "Task not found" });
+
+            // GUARD for authorization: only the creator (PM) or Admin can update the task
+            var requestingUser = await _context.Users.FindAsync(CreatorId); // from [FromQuery] or body
+            if (requestingUser is null) return Unauthorized();
+
+            Console.WriteLine($"Requesting User Role: {requestingUser.Role}, User ID: {requestingUser.Id}"); // Debug log
+
+            if ( (task.CreatorId != requestingUser.Id && requestingUser.Role != "ProjectManager") // Check if the requesting user is a PM and is the creator of the task
+                    && (requestingUser.Role != "Admin") // Optionally, allow Admins to edit any task regardless of creator
+                    && (task.CreatorId is null && requestingUser.Role != "ProjectManager") // if the task has no creator, only allow PMs and Admins to edit
+                    && (task.CreatorId is null && requestingUser.Role != "Admin") )
+                return StatusCode(403, new { message = "Only the task creator PM, or Admin, can edit this task." });
+
+            Console.WriteLine("Guard Success, updating task"); // Debug log
 
             // Guards for TargetDate, StartDate
             if (req.TargetDate < DateTime.Now.Date || req.TargetDate < req.StartDate)
@@ -713,10 +752,27 @@ namespace QtechOJT_Net9.Controllers
         [HttpDelete("{id}")]
         public async Task<IActionResult> DeleteMainTask(int id)
         {
+            int? requestingId = null;
+            if (Request.Headers.TryGetValue("x-user-id", out var AssigneeIdHeader))
+                if (int.TryParse(AssigneeIdHeader, out var parsedId))
+                    requestingId = parsedId;
+
             var task = await _context.Main_Tasks.FindAsync(id);
 
             if (task is null)
                 return NotFound(new { message = $"Task with ID {id} not found." });
+
+            var requestingUser = await _context.Users.FindAsync(requestingId); // from [FromQuery] or body
+                if (requestingUser is null) return Unauthorized();
+
+            // GUARD for authorization: only the creator (PM) or Admin can delete the task
+            // If NONE of these are true, then reject with 403:
+            if (  (task.CreatorId != requestingUser.Id && requestingUser.Role != "ProjectManager") // Check if the requesting user is a PM and is the creator of the task
+                    && (requestingUser.Role != "Admin")     // Optionally, allow Admins to delete any task regardless of creator
+                    && (task.CreatorId is null && requestingUser.Role != "ProjectManager") // if the task has no creator, only allow PMs and Admins to delete
+                    && (task.CreatorId is null && requestingUser.Role != "Admin") )
+            return StatusCode(403, new { message = "Only the task creator or a PM can delete this task." });
+
 
             _context.Main_Tasks.Remove(task);
             await _context.SaveChangesAsync();

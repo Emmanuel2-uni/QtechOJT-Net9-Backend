@@ -2,6 +2,7 @@
 using Microsoft.EntityFrameworkCore;
 using QtechOJT_Net9.Database;
 using QtechOJT_Net9.DTO.SubTask;
+using System.Threading.Tasks;
 
 namespace QtechOJT_Net9.Controllers
 {
@@ -38,8 +39,42 @@ namespace QtechOJT_Net9.Controllers
 
             return Ok(new { id = subtask.Id, title = subtask.Title });
         }
+
+        // -- DELETE /api/subtasks/:subtaskId --------------------
+        // Only the subtask's creator may delete it.
+        [HttpDelete("{subtaskId:int}")]
+        public async Task<IActionResult> DeleteSubTask(int subtaskId)
+        {
+
+            int? requestingId = null;
+            if (Request.Headers.TryGetValue("x-user-id", out var AssigneeIdHeader))
+                if (int.TryParse(AssigneeIdHeader, out var parsedId))
+                    requestingId = parsedId;
+
+            if (!Request.Headers.TryGetValue("x-user-id", out var userIdHeader)
+                || !int.TryParse(userIdHeader, out var userId))
+                return BadRequest(new { message = "User not identified — x-user-id header missing" });
+
+            var subtask = await _context.Sub_Tasks.FindAsync(subtaskId);
+            if (subtask is null)
+                return NotFound(new { message = "Subtask not found" });
+
+            var requestingUser = await _context.Users.FindAsync(requestingId); // from [FromQuery] or body
+                if (requestingUser is null) return Unauthorized();
+
+            if ( (subtask.CreatorId is not null && subtask.CreatorId != userId)
+                && requestingUser.Role != "Admin" 
+                && (subtask.CreatorId is null && requestingUser.Role != "ProjectManager")
+                && (subtask.CreatorId is null && requestingUser.Role != "Admin"))
+                return StatusCode(403, new { message = "You can only delete subtasks you created or if you are an Admin." });
+
+
+            _context.Sub_Tasks.Remove(subtask);
+            await _context.SaveChangesAsync();
+
+            return Ok(new { message = "Subtask deleted" });
+        }
+
+
     }
-
-
-
 }

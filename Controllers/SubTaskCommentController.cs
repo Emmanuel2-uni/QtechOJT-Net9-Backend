@@ -181,12 +181,15 @@ namespace QtechOJT_Net9.Controllers
         public async Task<IActionResult> DeleteComment(int commentId)
         {
             // Guard so that only the comment poster can delete the comment.
-            int? userId = null;
+            int? requestingId = null;
             if (Request.Headers.TryGetValue("x-user-id", out var userIdHeader)
                 && int.TryParse(userIdHeader, out var parsedId))
-                userId = parsedId;
+                requestingId = parsedId;
 
-            if (userId is null)
+            var requestingUser = await _context.Users.FindAsync(requestingId); // from [FromQuery] or body
+                if (requestingUser is null) return Unauthorized();
+
+            if (requestingId is null)
                 return BadRequest(new { message = "User not identified — x-user-id header missing" });
 
             var comment = await _context.Sub_Task_Comments.FindAsync(commentId);
@@ -195,8 +198,9 @@ namespace QtechOJT_Net9.Controllers
                 return NotFound(new { message = "Comment not found" });
 
             // Simple check to see if the current userId from the request header is the same as the comment ID
-            if (comment.UserId != userId)
-                return StatusCode(403, new { message = "You can only delete your own comments" });
+            if (comment.UserId != requestingId
+                && requestingUser.Role != "Admin")
+                return StatusCode(403, new { message = "You can only delete your own comments, in addition to Admins" });
 
             _context.Sub_Task_Comments.Remove(comment);
             await _context.SaveChangesAsync();
