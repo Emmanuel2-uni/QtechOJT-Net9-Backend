@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using QtechOJT_Net9.Database;
 using QtechOJT_Net9.Models;
+using System.Threading.Tasks;
 
 
 namespace QtechOJT_Net9.Controllers
@@ -123,11 +124,28 @@ namespace QtechOJT_Net9.Controllers
         [HttpDelete("{taskId}/{attachmentId}")]
         public async Task<IActionResult> Delete(int taskId, int attachmentId)
         {
+            int? requestingId = null;
+            if (Request.Headers.TryGetValue("x-user-id", out var AssigneeIdHeader))
+                if (int.TryParse(AssigneeIdHeader, out var parsedId))
+                    requestingId = parsedId;
+
             var attachment = await _context.Task_Attachments
                 .FirstOrDefaultAsync(a => a.Id == attachmentId && a.Main_TaskId == taskId);
 
             if (attachment is null)
                 return NotFound(new { message = "Attachment not found." });
+
+
+            var requestingUser = await _context.Users.FindAsync(requestingId); // from [FromQuery] or body
+            if (requestingUser is null) return Unauthorized();
+
+            // GUARD for authorization: only the creator (PM) or Admin can delete the task
+            // If NONE of these are true, then reject with 403:
+            if ( requestingUser.Role != "ProjectManager" // Check if the requesting user is a PM
+                    && requestingUser.Role != "Admin")     // Optionally, allow Admins too
+                return StatusCode(403, new { message = "Only a PM or Admin can delete attachments." });
+
+
 
             var filePath = Path.Combine(TaskDir(taskId), attachment.Filename);
 
