@@ -31,7 +31,7 @@ namespace QtechOJT_Net9.Models
         public required string Grouping { get; set; } = "dev"; // Groupings, Server SQL does not support enums, so we manually just set the default string
         public ICollection<Main_Task> Main_Tasks { get; set; } = []; // Phases contain main_tasks, 1:M relationship
 
-        //public int? StatusId; // FK to Status table
-        //public Status? DefaultStatus { get; set; } // Default status request, 
+        public int? DefaultStatusId { get; set; } // FK to Status table
+        public Status? DefaultStatus { get; set; } // Default status request, 
     }
 }

@@ -16,6 +16,7 @@ namespace QtechOJT_Net9.Models
         public required int IsFinal { get; set; } = 0;
         public required string Color { get; set; } = "#6b7280";
         public ICollection<Main_Task> Main_Tasks { get; set; } = []; // FK relation from Main_Tasks
+        public ICollection<Phase> Phases { get; set; } = []; // FK relation from Main_Tasks
 
 
     }

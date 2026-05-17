@@ -24,6 +24,7 @@
 
             int StatusId,
             string StatusLabel,
+            string StatusColor,
 
             int SeverityId,
             string SeverityLabel,

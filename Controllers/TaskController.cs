@@ -338,7 +338,7 @@ namespace QtechOJT_Net9.Controllers
                     m.Assignee.Id, m.Assignee.Name,
                     m.QaAssignee.Id, m.QaAssignee.Name,
                     m.Creator.Id, m.Creator.Name,
-                    m.Status.Id, m.Status.Label,
+                    m.Status.Id, m.Status.Label, m.Status.Color,
                     m.Severity.Id, m.Severity.Label, m.Severity.Color, m.Severity.SortOrder,
                     m.Phase.Id, m.Phase.Label, m.Phase.Grouping,
                     m.Variance,
@@ -387,23 +387,37 @@ namespace QtechOJT_Net9.Controllers
             task.PhaseId = newPhase.Id;
 
 
-            DateOnly realEnd = DateOnly.FromDateTime(DateTime.UtcNow);
+            //DateOnly realEnd = DateOnly.FromDateTime(DateTime.UtcNow);
+
+            // ── Auto-apply the phase's default status if one is configured ──
+            string? autoStatusLabel = null;
+            if (newPhase.DefaultStatusId.HasValue)
+            {
+                task.StatusId = newPhase.DefaultStatusId.Value;
+
+                // Fetch the label only for the activity log — one lightweight query
+                autoStatusLabel = await _context.Statuses
+                    .Where(s => s.Id == newPhase.DefaultStatusId.Value)
+                    .Select(s => s.Label)
+                    .FirstOrDefaultAsync();
+            }
 
             if (newPhase.IsFinal == 1)
             {
                 task.ActualEndDate = req.ActualEndDate;
                 task.Progress = 100;
-
                 task.Variance = req.ActualEndDate.HasValue
-                ? (int)(req.ActualEndDate.Value.Date - task.TargetDate.Date).TotalDays
-                : null;
-
+                    ? (int)(req.ActualEndDate.Value.Date - task.TargetDate.Date).TotalDays
+                    : null;
             }
+
             await _context.SaveChangesAsync();
 
             var logAction = $"Phase changed from \"{oldPhase?.Label}\" to \"{newPhase.Label}\""
-                            + (newPhase.IsFinal == 1 && task.ActualEndDate.HasValue
-                            ? $" — Actual End Date: {task.ActualEndDate.Value:yyyy-MM-dd}" : "");
+                + (newPhase.IsFinal == 1 && task.ActualEndDate.HasValue
+                    ? $" — Actual End Date: {task.ActualEndDate.Value:yyyy-MM-dd}" : "")
+                + (autoStatusLabel is not null
+                    ? $" — Status auto-set to \"{autoStatusLabel}\"" : ""); 
 
             _context.Activity_Log.Add(new Activity
             {
@@ -424,7 +438,7 @@ namespace QtechOJT_Net9.Controllers
                     m.Assignee.Id, m.Assignee.Name,
                     m.QaAssignee.Id, m.QaAssignee.Name,
                     m.Creator.Id, m.Creator.Name,
-                    m.Status.Id, m.Status.Label,
+                    m.Status.Id, m.Status.Label, m.Status.Color,
                     m.Severity.Id, m.Severity.Label, m.Severity.Color, m.Severity.SortOrder,
                     m.Phase.Id, m.Phase.Label, m.Phase.Grouping,
                     m.Variance,

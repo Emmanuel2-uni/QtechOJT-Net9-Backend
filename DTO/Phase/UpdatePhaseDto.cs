@@ -8,5 +8,7 @@
         public int IsDefault { get; set; } = 0;
         public int IsFinal { get; set; } = 0;
         public string Grouping { get; set; } = "dev";
+
+        public int? DefaultStatusId { get; set; }
     }
 }

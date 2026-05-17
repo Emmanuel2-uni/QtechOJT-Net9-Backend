@@ -43,7 +43,8 @@ namespace QtechOJT_Net9.Controllers
                 SortOrder = dto.SortOrder,
                 IsDefault = dto.IsDefault,
                 IsFinal = dto.IsFinal,
-                Grouping = dto.Grouping
+                Grouping = dto.Grouping,
+                DefaultStatusId = dto.DefaultStatusId
             };
 
             _context.Phases.Add(phase);
@@ -74,6 +75,7 @@ namespace QtechOJT_Net9.Controllers
             phase.IsDefault = dto.IsDefault;
             phase.IsFinal = dto.IsFinal;
             phase.Grouping = dto.Grouping;
+            phase.DefaultStatusId = dto.DefaultStatusId;
 
             await _context.SaveChangesAsync();
             return Ok(phase);
