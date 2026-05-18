@@ -478,9 +478,9 @@ namespace QtechOJT_Net9.Controllers
                 .Where(s => !incomingIds.Contains(s.Id))
                 .ToList();
 
-
-            // GUARD reject the whole sync if any subtask being removed wasn't created by this user
-            var forbidden = toDelete
+         
+                // GUARD reject the whole sync if any subtask being removed wasn't created by this user
+                var forbidden = toDelete
                 .Where(s => s.CreatorId is not null && s.CreatorId != CreatorId)
                 .ToList();
 
@@ -583,10 +583,12 @@ namespace QtechOJT_Net9.Controllers
 
             Console.WriteLine($"Requesting User Role: {requestingUser.Role}, User ID: {requestingUser.Id}"); // Debug log
 
-            if ( (task.CreatorId != requestingUser.Id && requestingUser.Role != "ProjectManager") // Check if the requesting user is a PM and is the creator of the task
+            // Ensure that if the task has no creator, PMs can also delete it
+            bool isPMandCreatorIsNull = task.CreatorId is null && requestingUser.Role == "ProjectManager";
+
+            if ( (task.CreatorId != requestingUser.Id) // Check if the requesting user is a PM and is the creator of the task
                     && (requestingUser.Role != "Admin") // Optionally, allow Admins to edit any task regardless of creator
-                    && (task.CreatorId is null && requestingUser.Role != "ProjectManager") // if the task has no creator, only allow PMs and Admins to edit
-                    && (task.CreatorId is null && requestingUser.Role != "Admin") )
+                    && !isPMandCreatorIsNull)
                 return StatusCode(403, new { message = "Only the task creator PM, or Admin, can edit this task." });
 
             Console.WriteLine("Guard Success, updating task"); // Debug log
@@ -779,12 +781,16 @@ namespace QtechOJT_Net9.Controllers
             var requestingUser = await _context.Users.FindAsync(requestingId); // from [FromQuery] or body
                 if (requestingUser is null) return Unauthorized();
 
+            Console.WriteLine($"Requesting User Role: {requestingUser.Role}, User ID: {requestingUser.Id}"); // Debug log
+
+            // Ensure that if the task has no creator, PMs can also delete it
+            bool isPMandCreatorIsNull = task.CreatorId is null && requestingUser.Role == "ProjectManager";
+
             // GUARD for authorization: only the creator (PM) or Admin can delete the task
             // If NONE of these are true, then reject with 403:
-            if (  (task.CreatorId != requestingUser.Id && requestingUser.Role != "ProjectManager") // Check if the requesting user is a PM and is the creator of the task
+            if (  (task.CreatorId != requestingUser.Id) // Check if the requesting user is a PM and is the creator of the task
                     && (requestingUser.Role != "Admin")     // Optionally, allow Admins to delete any task regardless of creator
-                    && (task.CreatorId is null && requestingUser.Role != "ProjectManager") // if the task has no creator, only allow PMs and Admins to delete
-                    && (task.CreatorId is null && requestingUser.Role != "Admin") )
+                    && !isPMandCreatorIsNull)
             return StatusCode(403, new { message = "Only the task creator or a PM can delete this task." });
 
 

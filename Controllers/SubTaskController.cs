@@ -62,10 +62,13 @@ namespace QtechOJT_Net9.Controllers
             var requestingUser = await _context.Users.FindAsync(requestingId); // from [FromQuery] or body
                 if (requestingUser is null) return Unauthorized();
 
-            if ( (subtask.CreatorId is not null && subtask.CreatorId != userId)
+            Console.WriteLine($"Requesting User Role: {requestingUser.Role}, User ID: {requestingUser.Id}"); // Debug log
+
+            bool isPMandCreatorIsNull = subtask.CreatorId is null && requestingUser.Role == "ProjectManager";
+            // ALL conditions MUST be true to deny access
+            if ( subtask.CreatorId != requestingUser.Id
                 && requestingUser.Role != "Admin" 
-                && (subtask.CreatorId is null && requestingUser.Role != "ProjectManager")
-                && (subtask.CreatorId is null && requestingUser.Role != "Admin"))
+                && !isPMandCreatorIsNull)
                 return StatusCode(403, new { message = "You can only delete subtasks you created or if you are an Admin." });
 
 
