@@ -372,7 +372,7 @@ namespace QtechOJT_Net9.Controllers
 
             if (task is null)
                 return BadRequest("Task not found");
-
+           
             var oldPhase = await _context.Phases  // Store the Old Phase for activity logging
                 .Where(p => p.Id == task.PhaseId)
                 .FirstOrDefaultAsync();
@@ -402,16 +402,19 @@ namespace QtechOJT_Net9.Controllers
                     .FirstOrDefaultAsync();
             }
 
-            if (newPhase.IsFinal == 1)
+            if (newPhase.IsFinal == 1 && task.Progress == 100)
             {
                 task.ActualEndDate = req.ActualEndDate;
                 task.Progress = 100;
                 task.Variance = req.ActualEndDate.HasValue
                     ? (int)(req.ActualEndDate.Value.Date - task.TargetDate.Date).TotalDays
                     : null;
+            }else if (newPhase.IsFinal == 1 && task.Progress < 100)
+            {
+                return BadRequest("Only tasks with 100% progress can be moved to a final phase.");
             }
 
-            await _context.SaveChangesAsync();
+                await _context.SaveChangesAsync();
 
             var logAction = $"Phase changed from \"{oldPhase?.Label}\" to \"{newPhase.Label}\""
                 + (newPhase.IsFinal == 1 && task.ActualEndDate.HasValue
